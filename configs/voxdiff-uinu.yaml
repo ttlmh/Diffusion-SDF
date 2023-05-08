@@ -1,0 +1,97 @@
+model:
+  base_learning_rate: 2.0e-06
+  target: models.voxdiff.models.diffusion.ddpm_3d.VoxelizedDiffusion
+  params:
+    linear_start: 0.00085
+    linear_end: 0.012
+    num_timesteps_cond: 1
+    log_every_t: 200
+    timesteps: 1000
+    loss_type: l1
+    first_stage_key: sdf
+    cond_stage_key: caption
+    image_size: 8
+    channels: 8
+    cond_stage_trainable: false
+    conditioning_key: crossattn
+    scale_by_std: true
+    monitor: val/loss_simple_ema
+    use_ema: false
+    scheduler_config:
+      target: models.voxdiff.lr_scheduler.LambdaLinearScheduler
+      params:
+        warm_up_steps:
+        - 10000
+        cycle_lengths:
+        - 10000000000000
+        f_start:
+        - 1.0e-06
+        f_max:
+        - 1.0
+        f_min:
+        - 1.0
+    unet_config:
+      target: models.voxdiff.modules.diffusionmodules.openaimodel.UinUNetModel
+      params:
+        image_size: 8
+        in_channels: 8
+        out_channels: 8
+        model_channels: 192
+        attention_resolutions:
+        - 1
+        - 2
+        - 4
+        - 8
+        num_res_blocks: 2
+        channel_mult:
+        - 1
+        - 2
+        - 4
+        num_heads: 8
+        dims: 3
+        use_spatial_transformer: true
+        transformer_depth: 1
+        context_dim: 768
+        legacy: false
+    first_stage_config:
+      target: models.networks.pvqvae_networks.auto_encoder.PVQVAE_diff
+      params:
+        embed_dim: 8
+        n_embed: 512
+        ckpt_path: ckpt/vae_epoch-120.pth
+        ddconfig:
+          double_z: true
+          z_channels: 8
+          resolution: 64
+          in_channels: 1
+          out_ch: 1
+          ch: 32
+          ch_mult:
+          - 1
+          - 2
+          - 4
+          - 4
+          num_res_blocks: 2
+          attn_resolutions: []
+          dropout: 0.0
+    cond_stage_config:
+      target: models.voxdiff.modules.encoders.modules.FrozenCLIPEmbedder
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 48
+    num_workers: 5
+    wrap: false
+    train:
+      target: models.voxdiff.data.snet.ShapeNetTextDatasetTrain
+      params:
+        thres: 0.2
+        ucond_p: 0.2
+        cat: all
+        prompt: ''
+    validation:
+      target: models.voxdiff.data.snet.ShapeNetTextDatasetValidation
+      params:
+        thres: 0.2
+        cat: all
+        prompt: ''

@@ -1,0 +1,1 @@
+from models.voxdiff.modules.losses.contperceptual import LPIPSWithDiscriminator
