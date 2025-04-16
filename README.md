@@ -26,7 +26,7 @@ conda activate diffusionsdf
 ```
 
 ### Download Pre-trained Models
-Download the SDF auto-encoder model file (vae_epoch-120.pth: [Baidu Disk](https://pan.baidu.com/s/1z0eh8SXSrn8tbq5epo0r6Q?pwd=f1cv) / [Google Drive](https://drive.google.com/file/d/18MxWYf6IItYOxUzdM5LiWb8dr9zSwA-2/view?usp=sharing)) and the Voxelized Diffusion model file (voxdiff-uinu.ckpt: [Baidu Disk](https://pan.baidu.com/s/1Emu5kFVaYbuKIkdCKlghXQ?pwd=q1wv) / [Google Drive](https://drive.google.com/file/d/1Cno18LFR_V24oCLxwmTJttdBu7AyP1aa/view?usp=sharing))) from the above links. Place the downloaded model files in the directory ```./ckpt``` .
+Download the SDF auto-encoder model file (vae_epoch-120.pth: [Baidu Disk](https://pan.baidu.com/s/1z0eh8SXSrn8tbq5epo0r6Q?pwd=f1cv) / [Google Drive](https://drive.google.com/file/d/18MxWYf6IItYOxUzdM5LiWb8dr9zSwA-2/view?usp=sharing)) and the Voxelized Diffusion model file (voxdiff-uinu.ckpt: [Baidu Disk](https://pan.baidu.com/s/1Emu5kFVaYbuKIkdCKlghXQ?pwd=q1wv) / [Google Drive](https://drive.google.com/file/d/1yeB0dJGZvIXdF1V1DhI-fRz6CKnGbIwJ/view?usp=sharing))) from the above links. Place the downloaded model files in the directory ```./ckpt``` .
 
 
 ### Demo for Text-to-Shape Generation
