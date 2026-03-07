@@ -5,15 +5,25 @@ Expected data directory structure:
     data/
         ShapeNet/
             sdf/
-                <category_id>/
+                <category_id>/        e.g. 03001627 (chair), 04379243 (table)
                     <model_id>/
-                        pc_sdf_sample.h5    # float32 SDF, shape (64,64,64)
+                        pc_sdf_sample.h5    # float32 array (262144,) = 64^3 SDF values
             text/
-                captions.json               # {model_id: [caption1, caption2, ...]}
+                captions.json         # {model_id: [caption1, caption2, ...]}
+                  -- OR --
+                captions.tablechair.csv   # raw Text2Shape CSV (auto-parsed if json absent)
+            train_models.json         # [model_id, ...]  (optional split files)
+            val_models.json
+            test_models.json
 
-The captions.json can be sourced from Text2Shape or ShapeGlot datasets.
+Text captions come from Text2Shape (chairs + tables only). Other categories
+are trained unconditionally (empty caption string).
+
+See preprocess/prepare_text2shape.py to convert Text2Shape CSV and generate
+split files from your SDF directory.
 """
 
+import csv
 import os
 import json
 import random
@@ -23,21 +33,22 @@ import torch
 from torch.utils.data import Dataset
 
 
-# Default ShapeNet category IDs (13 common categories)
+# Default ShapeNet category IDs (13 standard categories used in AutoSDF/Diffusion-SDF)
+# Note: Text2Shape only provides captions for 'chair' and 'table'.
 SHAPENET_CAT_IDS = {
-    'chair':    '03001627',
-    'table':    '04379243',
     'airplane': '02691156',
-    'car':      '02958343',
-    'sofa':     '04256520',
-    'lamp':     '03636649',
+    'bench':    '02828884',
     'cabinet':  '02933112',
+    'car':      '02958343',
+    'chair':    '03001627',
     'monitor':  '03211117',
-    'gun':      '04090263',
-    'couch':    '04401088',
-    'vessel':   '04530566',
+    'lamp':     '03636649',
     'speaker':  '03691459',
+    'gun':      '04090263',
+    'sofa':     '04256520',
+    'table':    '04379243',
     'telephone':'04401088',
+    'vessel':   '04530566',
 }
 
 ALL_CATS = list(SHAPENET_CAT_IDS.values())
@@ -54,8 +65,41 @@ def load_sdf(h5_path):
         else:
             key = list(f.keys())[0]
             sdf = f[key][:].astype(np.float32)
-    sdf = torch.from_numpy(sdf).view(1, 64, 64, 64)
+    sdf = torch.from_numpy(sdf).reshape(1, 64, 64, 64)
     return sdf
+
+
+def _load_captions(data_root: str) -> dict:
+    """
+    Load text captions for ShapeNet models.
+
+    Priority:
+    1. data_root/text/captions.json  — dict {model_id: [caption, ...]}
+    2. data_root/text/captions.tablechair.csv  — Text2Shape raw CSV
+       (download: wget http://text2shape.stanford.edu/dataset/captions.tablechair.csv)
+
+    Returns {model_id: [caption, ...]} or {} if neither file exists.
+    """
+    text_dir = os.path.join(data_root, 'text')
+
+    json_path = os.path.join(text_dir, 'captions.json')
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            return json.load(f)
+
+    csv_path = os.path.join(text_dir, 'captions.tablechair.csv')
+    if os.path.exists(csv_path):
+        captions = {}
+        with open(csv_path, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                model_id = row.get('modelId') or row.get('model_id', '')
+                description = row.get('description', '').strip()
+                if model_id and description:
+                    captions.setdefault(model_id, []).append(description)
+        return captions
+
+    return {}
 
 
 class ShapeNetTextDatasetBase(Dataset):
@@ -96,14 +140,8 @@ class ShapeNetTextDatasetBase(Dataset):
             # Treat as raw category ID
             self.cat_ids = [cat]
 
-        # Load captions
-        caption_path = os.path.join(data_root, 'text', 'captions.json')
-        if os.path.exists(caption_path):
-            with open(caption_path, 'r') as f:
-                self.captions = json.load(f)
-        else:
-            # Fallback: no captions available, use empty strings
-            self.captions = {}
+        # Load captions — prefer captions.json, fall back to Text2Shape CSV
+        self.captions = _load_captions(data_root)
 
         # Collect all SDF samples
         self.samples = self._collect_samples()

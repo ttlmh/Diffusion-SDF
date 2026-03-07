@@ -57,7 +57,7 @@ def load_sdf(path: str, thres: float = 0.2) -> torch.Tensor:
         else:
             key = list(f.keys())[0]
             sdf = f[key][:].astype(np.float32)
-    sdf = torch.from_numpy(sdf).view(1, 1, 64, 64, 64)
+    sdf = torch.from_numpy(sdf).reshape(1, 1, 64, 64, 64)
     sdf = torch.clamp(sdf, -thres, thres) / thres
     return sdf
 
